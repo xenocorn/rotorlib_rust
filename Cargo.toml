@@ -1,0 +1,7 @@
+[package]
+name = "rotorlib_rust"
+version = "0.1.0"
+authors = ["XenoCorn"]
+edition = "2018"
+
+[dependencies]
