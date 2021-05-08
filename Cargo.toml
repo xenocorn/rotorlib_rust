@@ -1,6 +1,6 @@
 [package]
     name = "rotorlib"
-    version = "0.1.0"
+    version = "0.2.0"
     authors = ["XenoCorn"]
     edition = "2018"
     description = "Client library for my message queue pet project."
