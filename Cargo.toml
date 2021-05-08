@@ -1,7 +1,16 @@
 [package]
-name = "rotorlib_rust"
-version = "0.1.0"
-authors = ["XenoCorn"]
-edition = "2018"
+    name = "rotorlib"
+    version = "0.1.0"
+    authors = ["XenoCorn"]
+    edition = "2018"
+    description = "Client library for my message queue pet project."
+    license = "BSD-3-Clause"
+    readme = "README.md"
+    repository = "https://github.com/xenocorn/rotorlib_rust"
 
 [dependencies]
+    tokio = { version = "1", features = ["rt", "net", "sync", "macros"] }
+    tokio-tungstenite = { version = "0.14", features = ["native-tls"]}
+    url = "2.2"
+    futures = "*"
+    md5 = "0.7"
