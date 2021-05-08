@@ -22,7 +22,21 @@ impl Connection{
     pub fn from_session(session: Session) -> Self{
         Self{session, socket: None}
     }
-    async fn setup_session(&self) -> Result<(), ()>{
+    async fn setup_session(&mut self) -> Result<(), ()>{
+        if self.session.is_a_node(){
+            if let Err(_) = self.set_node(self.session.is_a_node()).await{
+                return Err(());
+            }
+        }
+        let mut keys: Vec<String> = Vec::new();
+        for key in self.session.sub_str_keys(){
+            keys.push(key.clone());
+        }
+        for key in keys{
+            if let Err(_) = self.subscribe(&key).await{
+                return Err(());
+            }
+        }
         Ok(())
     }
     pub fn get_session(&self) -> Session{ self.session.clone() }

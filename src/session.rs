@@ -1,7 +1,7 @@
 use crate::protocol::{Key, hash};
 
 use std::collections::HashMap;
-use std::collections::hash_map::Values;
+use std::collections::hash_map::{Values, Keys};
 
 #[derive(Debug, Clone)]
 pub struct Session{
@@ -47,7 +47,10 @@ impl Session{
             Some(k) => { Some(*k) }
         }
     }
-    pub fn sub_keys(&self) -> Values<String, u32>{
+    pub fn sub_int_keys(&self) -> Values<String, u32>{
         self.subscriptions.values()
+    }
+    pub fn sub_str_keys(&self) -> Keys<String, u32>{
+        self.subscriptions.keys()
     }
 }
