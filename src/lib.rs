@@ -1,5 +1,5 @@
-mod protocol;
-mod session;
+pub mod protocol;
+pub mod session;
 
 use crate::session::Session;
 use crate::protocol::{Package, Parsable};
