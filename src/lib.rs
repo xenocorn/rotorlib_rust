@@ -6,7 +6,7 @@ use crate::protocol::{Package, Parsable};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use tokio::net::TcpStream;
 use futures::{SinkExt, StreamExt};
-use tokio_tungstenite::tungstenite::{Message, Error};
+use tokio_tungstenite::tungstenite::Message;
 use url::Url;
 
 
@@ -144,7 +144,7 @@ impl Connection{
             }
         }
     }
-    pub async fn send_msg(&mut self, key: Str, msg: Vec<u8>) -> Result<(), ()>{
+    pub async fn send_msg(&mut self, key: String, msg: Vec<u8>) -> Result<(), ()>{
         match self.socket.as_mut(){
             None => { Err(()) }
             Some(socket) => {
