@@ -201,7 +201,9 @@ impl Connection{
                                 return Ok(protocol::Package::Msg(msg));
                             }
                         }
-                        _ => {}
+                        Package::Node(node) => {
+                            return Ok(Package::Node(node))
+                        }
                     }
                 }
                 Err(_) => {
