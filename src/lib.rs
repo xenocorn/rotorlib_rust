@@ -144,6 +144,18 @@ impl Connection{
             }
         }
     }
+    pub async fn send_package(&mut self, package: protocol::Package) -> Result<(), ()>{
+        match self.socket.as_mut(){
+            None => { Err(()) }
+            Some(socket) => {
+                let res = socket.send(Message::Binary(package.to_bytes())).await;
+                match res{
+                    Ok(_) => { Ok(()) }
+                    Err(_) => { Err(()) }
+                }
+            }
+        }
+    }
     pub async fn send_msg(&mut self, key: String, msg: Vec<u8>) -> Result<(), ()>{
         match self.socket.as_mut(){
             None => { Err(()) }
