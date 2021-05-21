@@ -1,5 +1,4 @@
 use std::convert::{TryFrom, Into};
-use md5;
 
 #[cfg(test)]
 mod subscribe_package_tests{
@@ -10,13 +9,11 @@ mod subscribe_package_tests{
     fn test(){
         let reference_1 = SubscribePackage{
             is_sub: true,
-            route_key: 42,
-            msg_key: "SOME KEY".to_string()
+            key: "SOME KEY".to_string()
         };
         let reference_2 = SubscribePackage{
             is_sub: false,
-            route_key: 42,
-            msg_key: "".to_string()
+            key: "".to_string()
         };
         let result: Vec<u8> = reference_1.clone().into();
         match SubscribePackage::try_from(result){
@@ -61,13 +58,11 @@ mod message_package_tests{
     #[test]
     fn test(){
         let reference_1 = MessagePackage{
-            route_key: 42,
-            msg_key: "SOME KEY".to_string(),
+            key: "SOME KEY".to_string(),
             payload: vec![1, 2, 3, 4, 5],
         };
         let reference_2 = MessagePackage{
-            route_key: 42,
-            msg_key: "".to_string(),
+            key: "".to_string(),
             payload: vec![],
         };
         let result: Vec<u8> = reference_1.clone().into();
@@ -96,13 +91,11 @@ mod package_tests{
     fn test_sub(){
         let reference_1 = Package::Sub(SubscribePackage{
             is_sub: true,
-            route_key: 42,
-            msg_key: "SOME KEY".to_string()
+            key: "SOME KEY".to_string()
         });
         let reference_2 = Package::Sub(SubscribePackage{
             is_sub: false,
-            route_key: 42,
-            msg_key: "".to_string()
+            key: "".to_string()
         });
         let result: Vec<u8> = reference_1.clone().into();
         match Package::try_from(result){
@@ -133,13 +126,11 @@ mod package_tests{
     #[test]
     fn test_msg(){
         let reference_1 = Package::Msg(MessagePackage{
-            route_key: 42,
-            msg_key: "SOME KEY".to_string(),
+            key: "SOME KEY".to_string(),
             payload: vec![1, 2, 3, 4, 5],
         });
         let reference_2 = Package::Msg(MessagePackage{
-            route_key: 42,
-            msg_key: "".to_string(),
+            key: "".to_string(),
             payload: vec![],
         });
         let result: Vec<u8> = reference_1.clone().into();
@@ -159,20 +150,10 @@ mod package_tests{
     }
 }
 
-pub type Key = u64;
-
-pub fn get_route_key(msg_key: &String) -> Key{
-    let digest = md5::compute(msg_key.clone()).0;
-    let mut dst = [0u8; 8];
-    dst.clone_from_slice(&digest[0..8]);
-    Key::from_be_bytes(dst)
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct SubscribePackage {
     pub is_sub: bool,
-    pub route_key: Key,
-    pub msg_key: String,
+    pub key: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -182,8 +163,7 @@ pub struct RegistrationPackage{
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MessagePackage {
-    pub route_key: Key,
-    pub msg_key: String,
+    pub key: String,
     pub payload: Vec<u8>,
 }
 
@@ -201,8 +181,7 @@ impl Into<Vec<u8>> for SubscribePackage {
             false => {0b01000000}
         };
         let mut ret = vec![header];
-        ret.append(&mut self.route_key.to_be_bytes().to_vec());
-        ret.append(&mut self.msg_key.into_bytes());
+        ret.append(&mut self.key.into_bytes());
         ret
     }
 }
@@ -211,15 +190,14 @@ impl TryFrom<Vec<u8>> for SubscribePackage {
     type Error = ();
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        if bytes.len() < 9 { return Err(()) }
         let is_sub = (bytes[0] >> 5) & 0b00000001;
         let is_sub = if is_sub == 0 {false} else {true};
-        let mut dst = [0u8; 8];
-        dst.clone_from_slice(&bytes[1..9]);
-        let route_key = Key::from_be_bytes(dst);
-        match String::from_utf8(bytes[9..].to_owned()){
+        if bytes.len() < 2 {
+            return Ok( Self{is_sub, key: "".to_string()} )
+        }
+        match String::from_utf8(bytes[1..].to_owned()){
             Ok(msg_key) => {
-                Ok(Self{is_sub, route_key, msg_key})
+                Ok( Self{is_sub, key: msg_key } )
             }
             Err(_) => { Err(()) }
         }
@@ -248,8 +226,7 @@ impl TryFrom<Vec<u8>> for RegistrationPackage {
 impl Into<Vec<u8>> for MessagePackage {
     fn into(self) -> Vec<u8> {
         let mut ret: Vec<u8> = vec![0b00000000];
-        ret.append(&mut self.route_key.to_be_bytes().to_vec());
-        ret.append(&mut self.msg_key.clone().into_bytes());
+        ret.append(&mut self.key.clone().into_bytes());
         ret.push(0); // separator
         ret.append(&mut self.payload.clone());
         ret
@@ -260,19 +237,16 @@ impl TryFrom<Vec<u8>> for MessagePackage {
     type Error = ();
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        if bytes.len() < 9 { return Err(()) }
-        let mut dst = [0u8; 8];
-        dst.clone_from_slice(&bytes[1..9]);
-        let route_key = Key::from_be_bytes(dst);
-        let mut str_ends: usize = 5;
-        for (nom, char) in bytes[9..].iter().enumerate(){
-            str_ends = nom+9;
+        if bytes.len() < 2 { return Err(()) }
+        let mut str_ends: usize = 1;
+        for (nom, char) in bytes[1..].iter().enumerate(){
+            str_ends = nom+1;
             if *char == 0{ break }
         }
-        match String::from_utf8(bytes[9..str_ends].to_owned()){
+        match String::from_utf8(bytes[1..str_ends].to_owned()){
             Ok(msg_key) => {
                 let payload = bytes[str_ends+1..].to_vec();
-                Ok(Self{ route_key, msg_key, payload})
+                Ok(Self{ key: msg_key, payload})
             }
             Err(_) => { Err(()) }
         }

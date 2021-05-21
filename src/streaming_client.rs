@@ -79,11 +79,10 @@ impl Client{
                     let resp = conn.send(Package::Reg(RegistrationPackage{is_router: true})).await;
                     if let Err(_) = resp{ return Err(()) }
                 }
-                for (msg_key, rote_key) in self.session.all_keys(){
+                for key in self.session.get_subscriptions(){
                     let resp = conn.send(Package::Sub(SubscribePackage{
                         is_sub: true,
-                        route_key: rote_key,
-                        msg_key
+                        key,
                     })).await;
                     if let Err(_) = resp{ return Err(()) }
                 }
@@ -173,42 +172,40 @@ impl Client{
             }
         }
     }
-    pub async fn subscribe(&mut self, message_key: String) -> Result<(), ()>{
-        match self.session.sub(message_key.clone()){
-            None => { Ok(()) }
-            Some(routing_key) => {
+    pub async fn subscribe(&mut self, key: String) -> Result<(), ()>{
+        match self.session.sub(key.clone()){
+            true => {
                 let ret = self.send(Package::Sub(SubscribePackage{
                     is_sub: true,
-                    route_key: routing_key,
-                    msg_key: message_key.clone(),
+                    key: key.clone(),
                 })).await;
                 match ret{
                     Ok(_) => { Ok(()) }
                     Err(_) => {
-                        self.session.unsub(message_key);
+                        self.session.unsub(key);
                         Err(())
                     }
                 }
             }
+            false => { Ok(()) }
         }
     }
-    pub async fn unsubscribe(&mut self, message_key: String) -> Result<(), ()>{
-        match self.session.unsub(message_key.clone()){
-            None => { Ok(()) }
-            Some(routing_key) => {
+    pub async fn unsubscribe(&mut self, key: String) -> Result<(), ()>{
+        match self.session.unsub(key.clone()){
+            true => {
                 let ret = self.send(Package::Sub(SubscribePackage{
                     is_sub: false,
-                    route_key: routing_key,
-                    msg_key: message_key.clone(),
+                    key: key.clone(),
                 })).await;
                 match ret{
                     Ok(_) => { Ok(()) }
                     Err(_) => {
-                        self.session.sub(message_key);
+                        self.session.sub(key);
                         Err(())
                     }
                 }
             }
+            false => { Ok(()) }
         }
     }
     pub async fn reg(&mut self, is_a_router: bool) -> Result<(), ()>{
@@ -236,7 +233,7 @@ impl Client{
                             return Ok(Package::Reg(reg))
                         }
                         Package::Msg(msg) => {
-                            if let Some(_) = self.session.is_sub(msg.msg_key.clone()){
+                            if self.session.is_sub(&msg.key){
                                 return Ok(Package::Msg(msg))
                             }
                         }
