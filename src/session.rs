@@ -1,28 +1,28 @@
-use crate::protocol::{Key, hash};
+use crate::protocol::{Key, get_route_key};
 
 use std::collections::HashMap;
-use std::collections::hash_map::{Values, Keys};
+use std::collections::hash_map::{Values, Keys, IntoIter};
 
 #[derive(Debug, Clone)]
 pub struct Session{
-    is_self_a_node: bool,
+    is_self_a_router: bool,
     subscriptions: HashMap<String, Key>,
 }
 
 impl Session{
     pub fn new() -> Self{
-        Self{is_self_a_node: false, subscriptions: HashMap::new()}
+        Self{ is_self_a_router: false, subscriptions: HashMap::new()}
     }
-    pub fn set_a_node(&mut self, node: bool) -> Option<()>{
-        match node != self.is_self_a_node{
+    pub fn set_a_router(&mut self, is_a_router: bool) -> Option<()>{
+        match is_a_router != self.is_self_a_router {
             true => {
-                self.is_self_a_node = node;
+                self.is_self_a_router = is_a_router;
                 Some(())
             }
             false => { None }
         }
     }
-    pub fn is_a_node(&self) -> bool{ self.is_self_a_node }
+    pub fn is_a_router(&self) -> bool{ self.is_self_a_router }
     pub fn clear_subscriptions(&mut self) -> &Self{
         self.subscriptions = HashMap::new();
         self
@@ -31,7 +31,7 @@ impl Session{
         if self.subscriptions.contains_key(&key){
             return None;
         }
-        let int_key = hash(&key);
+        let int_key = get_route_key(&key);
         self.subscriptions.insert(key, int_key);
         Some(int_key)
     }
@@ -47,10 +47,13 @@ impl Session{
             Some(k) => { Some(*k) }
         }
     }
-    pub fn sub_int_keys(&self) -> Values<String, u32>{
+    pub fn sub_router_keys(&self) -> Values<String, Key>{
         self.subscriptions.values()
     }
-    pub fn sub_str_keys(&self) -> Keys<String, u32>{
+    pub fn sub_msg_keys(&self) -> Keys<String, Key>{
         self.subscriptions.keys()
+    }
+    pub fn all_keys(&self) -> IntoIter<String, u64> {
+        self.subscriptions.clone().into_iter()
     }
 }
